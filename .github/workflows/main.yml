@@ -1,3 +1,5 @@
+name: CI/CD Pipeline
+
 on:
   push:
     branches: [main]
@@ -7,45 +9,42 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  ci-build-deploy:
+  build-test-push-deploy:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-
     steps:
-      # ---------------- Checkout Repo ----------------
+
+      # Checkout the repo
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      # ---------------- Setup Node ----------------
-      - name: Setup Node.js
+      # Setup Node.js (for tests)
+      - name: Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      # ---------------- Run Tests ----------------
+      # Install dependencies and run tests
       - name: Install dependencies
         run: npm ci
       - name: Run tests
         run: npm test
 
-      # ---------------- Docker Build & Push ----------------
-      - name: Log in to GitHub Container Registry
+      # Login to GitHub Container Registry
+      - name: Login to GHCR
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      #  Extract Docker metadata
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
+      #  Build and push Docker image to GHCR
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
@@ -54,17 +53,11 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      # ---------------- Deploy to Railway ----------------
+      #  Deploy to Railway using CLI headlessly
       - name: Deploy to Railway
-        container: ghcr.io/railwayapp/cli:latest
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          # Headless login with API key
-          railway login
-
-          # Create or link a project (replace PROJECT_NAME as you like)
-          railway init --name PROJECT_NAME --template docker
-
-          # Deploy the Docker image
+          echo "Verifying Railway login..."
+          railway whoami
           railway up --detach
