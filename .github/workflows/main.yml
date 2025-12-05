@@ -10,14 +10,14 @@ env:
   RAILWAY_PROJECT_ID: '348c9ac1-ff6b-472f-8475-93710ff15ad2'
 
 jobs:
-  build-push-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
-    env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-    
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v5
 
       - name: Log in to GitHub Container Registry
@@ -35,7 +35,19 @@ jobs:
         run: |
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
 
+  deploy:
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    needs: build-and-push
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ env.RAILWAY_PROJECT_ID }}
+      IMAGE_NAME: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
       - name: Deploy to Railway
         run: |
-          railway up --detach --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main \
-          --project ${{ env.RAILWAY_PROJECT_ID }}
+          railway up --detach --image $IMAGE_NAME --project $RAILWAY_PROJECT_ID
