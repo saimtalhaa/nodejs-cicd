@@ -2,55 +2,83 @@ name: CI-CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ['main', 'release']
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-test-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
 
     steps:
-    # ---------- Checkout ----------
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      # ---------- Checkout Repository ----------
+      - name: Checkout repository
+        uses: actions/checkout@v5
 
-    # ---------- Setup Node & Test ----------
-    - name: Setup Node
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
+      # ---------- Setup Node & Run Tests ----------
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Run tests
-      run: npm test
+      - name: Run tests
+        run: npm test
 
-    # ---------- Build & Push Docker Image to GHCR ----------
-    - name: Login to GHCR
-      run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      # ---------- Build & Push Docker Image to GHCR ----------
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build Docker image
-      run: docker build -t ghcr.io/saimtalha/node-app:latest .
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-    - name: Push Docker image
-      run: docker push ghcr.io/saimtalha/node-app:latest
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
 
-    # ---------- Deploy to Railway ----------
-    - name: Install Railway CLI
-      run: npm i -g @railway/cli
+      # ---------- Deploy to Railway ----------
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
 
-    - name: Set Railway API Key
-      env:
-        RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
-      run: echo "RAILWAY_API_KEY is set"
+      - name: Set Railway API Key
+        run: echo "RAILWAY_API_KEY is set"
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
 
-    - name: Link Railway Project (if needed)
-      env:
-        RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
-      run: railway link --project <your-project-id>  # Optional if already linked
+      - name: Link Railway Project (if needed)
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+        run: railway link --project <your-project-id>  # Optional if already linked
 
-    - name: Deploy on Railway
-      env:
-        RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
-      run: railway up --detach
+      - name: Deploy on Railway
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+        run: railway up --detach
