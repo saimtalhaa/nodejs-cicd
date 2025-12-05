@@ -1,0 +1,49 @@
+name: CI-CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    # ---------- Run Tests ----------
+    - name: Setup Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run tests
+      run: npm test
+
+    # ---------- Build Docker Image ----------
+    - name: Login to GHCR
+      run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+
+    - name: Build Docker image
+      run: docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/node-app:latest .
+
+    - name: Push image to GHCR
+      run: docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/node-app:latest
+
+    # ---------- Deploy to Railway ----------
+    - name: Install Railway CLI
+      run: npm i -g @railway/cli
+
+    - name: Set Railway API Key
+      env:
+        RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+      run: echo "RAILWAY_API_KEY is set"
+
+    - name: Deploy on Railway
+      env:
+        RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+      run: railway up --detach
