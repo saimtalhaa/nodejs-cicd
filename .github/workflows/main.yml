@@ -62,7 +62,7 @@ jobs:
         echo "Starting deployment of image $IMAGE_URL to service $SERVICE_TARGET"
         
         # Deploy using the 'up' command, authenticated by RAILWAY_TOKEN in the environment
-        railway up --service $SERVICE_TARGET --image $IMAGE_URL --detach
+        railway image deploy $IMAGE_URL --service $SERVICE_TARGET
       
       env:
         # CRITICAL: This environment variable authenticates the 'railway up' command.
