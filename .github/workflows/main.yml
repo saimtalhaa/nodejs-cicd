@@ -10,10 +10,10 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  build-test-push:
+  build-test-push-deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1️⃣ Checkout code
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v5
 
@@ -37,7 +37,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }} # <-- Personal Access Token with write:packages
+          password: ${{ secrets.GHCR_TOKEN }}
 
       # 6️⃣ Extract Docker metadata
       - name: Extract Docker metadata
@@ -55,17 +55,36 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      # 8️⃣ Login to Railway
+      # 8️⃣ Install Railway CLI
       - name: Install Railway CLI
         run: npm i -g @railway/cli
 
+      # 9️⃣ Set Railway API key and login (fail if it fails)
       - name: Railway Login
-        run: railway login --apiKey ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          set -e
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "RAILWAY_TOKEN secret is not set!"
+            exit 1
+          fi
+          export RAILWAY_API_KEY=$RAILWAY_TOKEN
+          echo "Railway API key set successfully."
 
-      # 9️⃣ Link or create Railway project
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      # 🔟 Link Railway project (fail if it fails)
       - name: Link Railway project
-        run: railway link --project <your-project-id>
+        run: |
+          set -e
+          railway link --project <your-project-id>
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_TOKEN }}
 
-      # 🔟 Deploy to Railway
+      # 1️⃣1️⃣ Deploy to Railway (fail if it fails)
       - name: Deploy to Railway
-        run: railway up --detach
+        run: |
+          set -e
+          railway up --detach
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_TOKEN }}
