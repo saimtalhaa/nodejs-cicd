@@ -13,9 +13,6 @@ env:
 jobs:
   build-push-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
     - name: Checkout repository
@@ -42,13 +39,14 @@ jobs:
         curl -fsSL https://railway.app/install.sh | sh
         echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
-    # Deploy with Railway CLI
+    # Deploy via railway deploy --image
     - name: Deploy to Railway
       env:
         RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       run: |
-        railway login --token "$RAILWAY_TOKEN"
-        railway up \
+        export RAILWAY_TOKEN="$RAILWAY_TOKEN"
+
+        railway deploy \
           --project ${{ env.RAILWAY_PROJECT_ID }} \
           --service ${{ env.RAILWAY_SERVICE_TARGET }} \
           --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
