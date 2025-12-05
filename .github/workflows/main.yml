@@ -73,11 +73,6 @@ jobs:
         env:
           RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
 
-      - name: Link Railway Project (if needed)
-        env:
-          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
-        run: railway link --project <your-project-id>  # Optional if already linked
-
       - name: Deploy on Railway
         env:
           RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
