@@ -37,7 +37,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }} # <-- Personal Access Token with write:packages
+          password: ${{ secrets.GHCR_TOKEN }} # <-- Personal Access Token with write:packages
 
       # 6️⃣ Extract Docker metadata
       - name: Extract Docker metadata
