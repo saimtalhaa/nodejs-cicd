@@ -22,40 +22,49 @@ jobs:
       attestations: write
 
     steps:
-      # Step 1: Checkout repo
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      # Step 2: Log in to GitHub Container Registry (for PUSH)
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }} # Uses the default GH Actions token
-
-      # Step 3: Build Docker image
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main .
-
-      # Step 4: Push Docker image to GitHub Container Registry
-      - name: Push Docker image
-        run: |
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
-
-      # --- Deployment Steps Using the Official Action ---
+    # Step 1: Checkout repository
+    - name: Checkout repository
+      uses: actions/checkout@v4
+  
+    # Step 2: Setup Node.js 18 (Required to install the Railway CLI via npm)
+    - name: Setup Node.js 18
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+  
+    # Step 3: Log in to GitHub Container Registry (for PUSH)
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+  
+    # Step 4: Build Docker image
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main .
+  
+    # Step 5: Push Docker image to GitHub Container Registry
+    - name: Push Docker image
+      run: |
+        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+  
+    # Step 6: Deploy Image to Railway (Direct CLI Method)
+    - name: Deploy Image to Railway (Direct CLI)
+      run: |
+        # Install the Railway CLI globally
+        npm install -g @railway/cli
+        
+        IMAGE_URL="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main"
+        SERVICE_TARGET="${{ env.RAILWAY_SERVICE_TARGET }}"
+        
+        echo "Starting deployment of image $IMAGE_URL to service $SERVICE_TARGET"
+        
+        # Deploy using the 'up' command, authenticated by RAILWAY_TOKEN in the environment
+        railway up --service $SERVICE_TARGET --image $IMAGE_URL --detach
       
-      # Step 5: Deploy the Pre-Built Docker Image to Railway
-      - name: Deploy Image to Railway
-        uses: railwayapp/github-action@v3
-        with:
-          # Token: This automatically looks for secrets.RAILWAY_TOKEN
-          token: ${{ secrets.RAILWAY_TOKEN }}
-          
-          # Project ID: Explicitly defines the project to deploy to
-          project_id: ${{ env.RAILWAY_PROJECT_ID }}
-          
-          # Command: Tells Railway to deploy a specific image to a specific service.
-          command: |
-            railway up --service ${{ env.RAILWAY_SERVICE_TARGET }} --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main --detach
+      env:
+        # CRITICAL: This environment variable authenticates the 'railway up' command.
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        RAILWAY_PROJECT_ID: ${{ env.RAILWAY_PROJECT_ID }}
