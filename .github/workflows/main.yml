@@ -9,10 +9,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # ---------- Checkout ----------
     - name: Checkout repo
       uses: actions/checkout@v3
 
-    # ---------- Run Tests ----------
+    # ---------- Setup Node & Test ----------
     - name: Setup Node
       uses: actions/setup-node@v3
       with:
@@ -24,16 +25,15 @@ jobs:
     - name: Run tests
       run: npm test
 
-    # ---------- Build Docker Image ----------
+    # ---------- Build & Push Docker Image to GHCR ----------
     - name: Login to GHCR
-      run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
     - name: Build Docker image
-      run: docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/node-app:latest .
+      run: docker build -t ghcr.io/${{ github.actor }}/node-app:latest .
 
-    - name: Push image to GHCR
-      run: docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/node-app:latest
-
+    - name: Push Docker image
+      run: docker push ghcr.io/${{ github.actor }}/node-app:latest
 
     # ---------- Deploy to Railway ----------
     - name: Install Railway CLI
@@ -43,6 +43,11 @@ jobs:
       env:
         RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
       run: echo "RAILWAY_API_KEY is set"
+
+    - name: Link Railway Project (if needed)
+      env:
+        RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+      run: railway link --project <your-project-id>  # Optional if already linked
 
     - name: Deploy on Railway
       env:
