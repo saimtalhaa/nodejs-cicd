@@ -48,7 +48,7 @@ jobs:
       
       # Step 5: Deploy the Pre-Built Docker Image to Railway
       - name: Deploy Image to Railway
-        uses: railwayapp/cli-action@v3.4.0
+        uses: railwayapp/github-action@v3
         with:
           # Token: This automatically looks for secrets.RAILWAY_TOKEN
           token: ${{ secrets.RAILWAY_TOKEN }}
