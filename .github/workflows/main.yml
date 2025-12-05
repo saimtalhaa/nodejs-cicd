@@ -2,15 +2,13 @@ name: Build, Push, and Deploy to Railway
 
 on:
   push:
-    branches: [main] # Trigger workflow on push to main branch
+    branches: [main]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  #  ACTION REQUIRED: Replace 'YOUR_SERVICE_NAME' with the actual name or ID of your service.
-  RAILWAY_SERVICE_TARGET: '0193c62f-bae6-4ef2-89e7-9cef55b7a657' 
-  #  ACTION REQUIRED: Replace 'YOUR_PROJECT_ID' with your project's ID.
-  RAILWAY_PROJECT_ID: '348c9ac1-ff6b-472f-8475-93710ff15ad2' # You had this ID, ensure it's correct
+  RAILWAY_SERVICE_TARGET: '0193c62f-bae6-4ef2-89e7-9cef55b7a657'
+  RAILWAY_PROJECT_ID: '348c9ac1-ff6b-472f-8475-93710ff15ad2'
 
 jobs:
   build-push-deploy:
@@ -18,39 +16,39 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write
-      attestations: write
 
     steps:
-    # Step 1: Checkout repository
     - name: Checkout repository
       uses: actions/checkout@v4
 
-  
-    # Step 2: Log in to GitHub Container Registry (for PUSH)
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-  
-    # Step 3: Build Docker image
+
     - name: Build Docker image
       run: |
         docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main .
-  
-    # Step 4: Push Docker image to GitHub Container Registry
+
     - name: Push Docker image
       run: |
         docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
-  
-    # Step 5: Deploy Image to Railway (Direct CLI Method)
-    - name: Deploy Image to Railway
-      uses: railwayapp/github-action@v3
-      with:
-        service: ${{ env.RAILWAY_SERVICE_TARGET }}
-        project: ${{ env.RAILWAY_PROJECT_ID }}
-        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+
+    # Install Railway CLI
+    - name: Install Railway CLI
+      run: |
+        curl -fsSL https://railway.app/install.sh | sh
+        echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+    # Deploy with Railway CLI
+    - name: Deploy to Railway
       env:
         RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      run: |
+        railway login --token "$RAILWAY_TOKEN"
+        railway up \
+          --project ${{ env.RAILWAY_PROJECT_ID }} \
+          --service ${{ env.RAILWAY_SERVICE_TARGET }} \
+          --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
