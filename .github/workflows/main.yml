@@ -65,10 +65,16 @@ jobs:
           push-to-registry: true
 
       # ---------- Deploy to Railway ----------
-    - name: Install Railway CLI
-      run: npm i -g @railway/cli
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
 
-    - name: Deploy on Railway
-      env:
-        RAILWAY_API_KEY: ${{ secrets.RAILWAY_TOKEN }}
-      run: railway up --detach
+      - name: Link Railway Project
+        run: railway link --project f35fe291-7420-4a94-971a-65f24e4d2c63
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy on Railway
+        run: railway up --detach
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_TOKEN }}
+
