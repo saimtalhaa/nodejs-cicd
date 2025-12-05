@@ -30,7 +30,11 @@ jobs:
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
     - name: Build Docker image
-      run: docker build -t ghcr.io/${{ github.actor }}/node-app:latest .
+      run: |
+        LOWERCASE_USER=$(echo "${{ github.actor }}" | tr '[:upper:]' '[:lower:]' | tr -d '-')
+        docker build -t ghcr.io/$LOWERCASE_USER/node-app:latest .
+        docker push ghcr.io/$LOWERCASE_USER/node-app:latest
+
 
     - name: Push Docker image
       run: docker push ghcr.io/${{ github.actor }}/node-app:latest
