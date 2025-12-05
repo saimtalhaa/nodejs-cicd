@@ -34,6 +34,7 @@ jobs:
     - name: Push image to GHCR
       run: docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/node-app:latest
 
+
     # ---------- Deploy to Railway ----------
     - name: Install Railway CLI
       run: npm i -g @railway/cli
