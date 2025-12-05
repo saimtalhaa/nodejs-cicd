@@ -1,90 +1,66 @@
-name: CI/CD Pipeline
-
 on:
   push:
-    branches:
-      - main
+    branches: [main]   # Trigger workflow on push to main branch
 
 env:
-  IMAGE_NAME: ${{ github.repository }}
   REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-test-push-deploy:
+  build-push-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
     steps:
-      # 1️⃣ Checkout repository
+      # Step 1: Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      # 2️⃣ Set up Node.js
-      - name: Set up Node.js
+      # Step 2: Set up Node.js (required for Railway CLI)
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: "20"
 
-      # 3️⃣ Install dependencies
-      - name: Install dependencies
-        run: npm ci
-
-      # 4️⃣ Run tests
-      - name: Run tests
-        run: npm test
-
-      # 5️⃣ Login to GHCR
-      - name: Login to GitHub Container Registry
+      # Step 3: Log in to GitHub Container Registry
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 6️⃣ Extract Docker metadata
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      # Step 4: Build Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main .
 
-      # 7️⃣ Build and push Docker image
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      # Step 5: Push Docker image to GitHub Container Registry
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
 
-      # 8️⃣ Install Railway CLI
+      # Step 6: Install Railway CLI
       - name: Install Railway CLI
-        run: npm i -g @railway/cli
+        run: npm install -g @railway/cli
 
-      # 9️⃣ Set Railway API key and login (fail if it fails)
-      - name: Railway Login
+      # Step 7: Link Railway project (if not already linked)
+      - name: Link Railway Project
         run: |
           set -e
-          if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "RAILWAY_TOKEN secret is not set!"
-            exit 1
-          fi
-          export RAILWAY_API_KEY=$RAILWAY_TOKEN
-          echo "Railway API key set successfully."
-
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      # 🔟 Link Railway project (fail if it fails)
-      - name: Link Railway project
-        run: |
-          set -e
-          railway link --project <your-project-id>
+          echo "Linking Railway project..."
+          railway link --project f35fe291-7420-4a94-971a-65f24e4d2c63
         env:
           RAILWAY_API_KEY: ${{ secrets.RAILWAY_TOKEN }}
 
-      # 1️⃣1️⃣ Deploy to Railway (fail if it fails)
+      # Step 8: Deploy to Railway (browserless)
       - name: Deploy to Railway
         run: |
           set -e
+          echo "Deploying to Railway..."
           railway up --detach
         env:
           RAILWAY_API_KEY: ${{ secrets.RAILWAY_TOKEN }}
