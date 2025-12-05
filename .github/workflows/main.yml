@@ -1,4 +1,4 @@
-name: Build, Push, and Deploy to Railwa
+name: Build, Push, and Deploy to Railway
 
 on:
   push:
@@ -7,7 +7,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  RAILWAY_PROJECT_ID: '348c9ac1-ff6b-472f-8475-93710ff15ad2'
 
 jobs:
   build-and-push:
@@ -41,8 +40,8 @@ jobs:
     needs: build-and-push
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      RAILWAY_PROJECT_ID: ${{ env.RAILWAY_PROJECT_ID }}
-      IMAGE_NAME: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+      RAILWAY_PROJECT_ID: 348c9ac1-ff6b-472f-8475-93710ff15ad2
+      IMAGE_NAME: ghcr.io/saimtalhaa/nodejs-cicd:main  # repeated literal, cannot use top-level env
 
     steps:
       - name: Checkout repo
@@ -51,3 +50,4 @@ jobs:
       - name: Deploy to Railway
         run: |
           railway up --detach --image $IMAGE_NAME --project $RAILWAY_PROJECT_ID
+
