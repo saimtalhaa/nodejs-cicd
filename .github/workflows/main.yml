@@ -1,4 +1,4 @@
-name: Build, Push, and Deploy to Railway
+name: Build, Push, and Deploy to Railwa
 
 on:
   push:
