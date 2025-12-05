@@ -38,16 +38,11 @@ jobs:
       run: |
         docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
   
-    - name: Install Railway CLI
-      run: npm install -g @railway/cli
-
-    # Install Railway CLI
-    - name: Install Railway CLI
+    - name: Install Railway CLI (correct installer)
       run: |
         curl -fsSL https://railway.app/install.sh | sh
         echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
-    # Deploy via railway deploy --image
     - name: Deploy to Railway
       env:
         RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
