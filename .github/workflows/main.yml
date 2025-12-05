@@ -48,6 +48,14 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: 348c9ac1-ff6b-472f-8475-93710ff15ad2
+          RAILWAY_SERVICE_TARGET: 0193c62f-bae6-4ef2-89e7-9cef55b7a657
+          IMAGE_NAME: ghcr.io/saimtalhaa/nodejs-cicd:main
         run: |
-          railway up --detach --image $IMAGE_NAME --project $RAILWAY_PROJECT_ID
-
+          set -e
+          # Deploy using prebuilt Docker image
+          railway deploy --image $IMAGE_NAME --project $RAILWAY_PROJECT_ID --service $RAILWAY_SERVICE_TARGET
+      
+      
