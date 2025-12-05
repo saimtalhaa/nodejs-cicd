@@ -71,9 +71,9 @@ jobs:
       - name: Set Railway API Key
         run: echo "RAILWAY_API_KEY is set"
         env:
-          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_TOKEN }} ##API key of railway account
 
       - name: Deploy on Railway
         env:
-          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_TOKEN }}
         run: railway up --detach
